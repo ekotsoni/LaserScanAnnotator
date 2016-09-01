@@ -53,6 +53,7 @@ classes = None
 selections = []
 le = None
 objs = None
+rightClick = None
 
 class Window(FigureCanvas):
 
@@ -133,8 +134,6 @@ class LS(Window):
                 annot[cnt].colourID.append(colorName)
                 annot[cnt].listofpointsx.append(annot[cnt].samex[i])
                 annot[cnt].listofpointsy.append(annot[cnt].samey[i])
-                #annot[cnt].samex = [x for x in annot[cnt].samex if x not in annot[cnt].listofpointsx]
-                #annot[cnt].samey = [y for y in annot[cnt].samey if y not in annot[cnt].listofpointsy]
         ok = 'Yes'
         scan_widget.drawLaserScan()
         colour_index+=1
@@ -156,7 +155,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
 
-        global scan_widget, classes, le, selections
+        global scan_widget, classes, le, selections,classLabels
 
         QtWidgets.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -174,9 +173,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         prevFrameButton = QPushButton("Previous")
         nextFrameButton = QPushButton("Next")
         stopButton = QPushButton("Stop")
-        le = QLineEdit(self)
-        le.setDragEnabled(True)
-        addButton = QPushButton('Add', self)
 
         classes = QComboBox()
         classes.addItem('Classes')
@@ -191,8 +187,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         classLayout = QVBoxLayout()
         classLayout.addWidget(classes)
-        classLayout.addWidget(le)
-        classLayout.addWidget(addButton)
         classLayout.setAlignment(Qt.AlignTop)
 
         layout = QVBoxLayout(self.main_widget)
@@ -207,12 +201,49 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         nextFrameButton.clicked.connect(self.bnext)
         stopButton.clicked.connect(self.bstop)
         classes.activated[str].connect(self.chooseClass)
-        addButton.clicked.connect(self.showObject)
 
         fig.canvas.mpl_connect('button_press_event', self.onClick)
 
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
+
+    def contextMenuEvent(self,event):
+
+        global ok, rightClick
+
+        rightClick = event.pos()
+
+        if (ok == 'Rect'):
+
+            menu = QMenu(self)
+
+            deleteBox = menu.addAction('Delete Box')
+            deleteBox.triggered.connect(self.delBox)
+            changeId = menu.addAction('Change Id')
+            changeId.triggered.connect(self.chId)
+            cancel = menu.addAction('Cancel')
+
+            action = menu.exec_(self.mapToGlobal(event.pos()))
+
+    def delBox(self,action):
+        global firstclick,secondclick,cnt,annot,ok,scan_widget
+        firstclick = False
+        secondclick = False
+        if ((cnt>=0) and (cnt<len(annot))):
+            ok = 'Yes'
+            scan_widget.drawLaserScan()
+
+    def chId(self,action):
+        global le, rightClick
+        le = QLineEdit(self.window())
+        le.setDragEnabled(True)
+        le.move(700,100)
+        #le.move(rightClick)
+        le.show()
+        Ok = QPushButton("Ok", self)
+        Ok.move(700,150)
+        Ok.clicked.connect(self.showObject)
+        Ok.show()
 
     def bplay(self):
         global scan_widget
@@ -247,9 +278,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         else:
             ok = 'No'
             cnt= -1
-            ax.clear()
-            fw.draw()
-            #scan_widget.drawLaserScan()
+            scan_widget.drawLaserScan()
 
     def bstop(self):
         global cnt,timer,ax,fw
@@ -264,31 +293,20 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         x = event.x
         y = event.y
         if event.button == Qt.LeftButton:
-                if firstclick == False:
-                    if event.inaxes is not None:
-                        c1 = [event.xdata,event.ydata]
-                        firstclick = True
-                elif secondclick == False:
-                    if event.inaxes is not None:
-                        c2 = [event.xdata,event.ydata]
-                        if (c2[0]<c1[0]):
-                            temp_c = c2
-                            c2 = c1
-                            c1 = temp_c
-                        secondclick = True
-                        ok = 'Rect'
-                        scan_widget.drawLaserScan()
-                elif ((not thirdclick) and (secondclick)):
-                        #if event.button == Qt.RightButton:
-                        #na emfanizei to menu me tis classes 
-                        #na exei kai tin epilogi pros9ikis class
-                        #contextMenuEvent(self)
-                    if event.button == Qt.LeftButton:
-                        firstclick = False
-                        secondclick = False
-                        if ((cnt>=0) and (cnt<len(annot))):
-                            ok = 'Yes'
-                            scan_widget.drawLaserScan()
+            if firstclick == False:
+                if event.inaxes is not None:
+                    c1 = [event.xdata,event.ydata]
+                    firstclick = True
+            elif secondclick == False:
+                if event.inaxes is not None:
+                    c2 = [event.xdata,event.ydata]
+                    if (c2[0]<c1[0]):
+                        temp_c = c2
+                        c2 = c1
+                        c1 = temp_c
+                    secondclick = True
+                    ok = 'Rect'
+                    scan_widget.drawLaserScan()
 
     def showObject(self):
         global le,selections,classes,objs,sel_pos
