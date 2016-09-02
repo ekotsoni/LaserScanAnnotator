@@ -237,6 +237,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         global le, rightClick
         le = QLineEdit(self.window())
         le.setDragEnabled(True)
+        le.setPlaceholderText("Write ID:")
         le.move(700,100)
         #le.move(rightClick)
         le.show()
@@ -244,6 +245,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         Ok.move(700,150)
         Ok.clicked.connect(self.showObject)
         Ok.show()
+
 
     def bplay(self):
         global scan_widget
@@ -314,6 +316,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             classes.addItem(le.text())
             objs = le.text()
             selections.append(objs)
+        #le.setEnabled(False)
 
     def chooseClass(self,text):
         global scan_widget,txt,colour_index,colours,annot,selections
