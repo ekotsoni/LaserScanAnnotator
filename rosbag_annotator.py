@@ -31,9 +31,8 @@ input_topic = None
 
 def play_bag_file(bag_file):
 
-	global laserDistances, sx, sy, theta
+	global laserDistances, sx, sy, theta, input_topic
 
-	compressed = False
 	bag = rosbag.Bag(bag_file)
 	info_dict = yaml.load(bag._get_yaml_info())
 	topics =  info_dict['topics']
@@ -55,6 +54,8 @@ def play_bag_file(bag_file):
 
 def start(input_file,output_file,scan_topic):
 
+	global sx, sy, input_topic
+
 	bag_file = input_file
 	output_file = output_file
 	input_topic = scan_topic
@@ -68,7 +69,7 @@ def start(input_file,output_file,scan_topic):
 	if os.path.exists(feature_file) and not append:
 		os.remove(feature_file)
 
-	print feature_file
+	#print feature_file
 
 	#Open bag and get framerate	
 	play_bag_file(bag_file)

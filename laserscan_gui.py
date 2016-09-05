@@ -7,6 +7,7 @@ import time
 import math
 import csv
 import ast
+import functools
 #rom scipy import spatial
 
 # Make sure that we are using QT5
@@ -35,6 +36,7 @@ fig = None
 fw = None
 scan_widget = None
 ok = 'No'
+nw = None
 #Arxikopoihsh annotation
 objx = []
 objy = []
@@ -54,6 +56,9 @@ selections = []
 le = None
 objs = None
 rightClick = None
+items = []
+openline = False
+write = False
 
 class Window(FigureCanvas):
 
@@ -126,7 +131,7 @@ class LS(Window):
 
     def training(self):
 
-        global annot,samex,samey,c1,c2,colorName,colours,colour_index,colourID,listofpointsx,listofpointsy,ok,firstclick,secondclick,cnt,scan_widget, bag_file, data,selections
+        global annot,samex,samey,c1,c2,colorName,colours,colour_index,colourID,listofpointsx,listofpointsy,ok,firstclick,secondclick,cnt,scan_widget, bag_file, data,selections,write
 
         for i in range(len(annot[cnt].samex)):
             if ((annot[cnt].samex[i] >= c1[0]) and (annot[cnt].samex[i] <= c2[0]) and ((annot[cnt].samey[i] >= c2[1]) and (annot[cnt].samey[i] <= c1[1]))):
@@ -147,7 +152,7 @@ class LS(Window):
         with open(filename, 'w') as data:
             write = csv.writer(data)
             for row in annot:
-                row_ = [row.samex, row.samey, row.listofpointsx, row.listofpointsy, row.annotID, row.colourID]
+                row_ = [row.samex, row.samey, row.listofpointsx, row.listofpointsy, row.annotID, row.colourID, row.selections]
                 write.writerow(row_)
             data.close()
 
@@ -155,7 +160,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
 
-        global scan_widget, classes, le, selections,classLabels
+        global scan_widget, classes, le, selections,annot, selections,filename
 
         QtWidgets.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -173,10 +178,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         prevFrameButton = QPushButton("Previous")
         nextFrameButton = QPushButton("Next")
         stopButton = QPushButton("Stop")
-
+        '''
         classes = QComboBox()
         classes.addItem('Classes')
-
+        for i in range(len(items)):
+            classes.addItem(items[i])
+        '''
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(playButton)
         buttonLayout.addWidget(pauseButton)
@@ -184,15 +191,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         buttonLayout.addWidget(nextFrameButton)
         buttonLayout.addWidget(stopButton)
         buttonLayout.setAlignment(Qt.AlignTop)
-
+        '''
         classLayout = QVBoxLayout()
         classLayout.addWidget(classes)
         classLayout.setAlignment(Qt.AlignTop)
-
+        '''
         layout = QVBoxLayout(self.main_widget)
         layout.addLayout(scanLayout)
         layout.addLayout(buttonLayout)
-        layout.addLayout(classLayout)
+        #layout.addLayout(classLayout)
 
         #Define Connections
         playButton.clicked.connect(self.bplay)
@@ -200,7 +207,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         prevFrameButton.clicked.connect(self.bprevious)
         nextFrameButton.clicked.connect(self.bnext)
         stopButton.clicked.connect(self.bstop)
-        classes.activated[str].connect(self.chooseClass)
+        #classes.activated[str].connect(self.chooseClass)
 
         fig.canvas.mpl_connect('button_press_event', self.onClick)
 
@@ -209,7 +216,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def contextMenuEvent(self,event):
 
-        global ok, rightClick
+        global ok, rightClick,items,classes,submenu
 
         rightClick = event.pos()
 
@@ -219,32 +226,58 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             deleteBox = menu.addAction('Delete Box')
             deleteBox.triggered.connect(self.delBox)
-            changeId = menu.addAction('Change Id')
+            submenu = menu.addMenu('Choose Person')
+            for i in range(len(items)):
+                classes = submenu.addAction(items[i])
+                classes.triggered.connect(functools.partial(self.chooseClass,items[i]))
+            changeId = submenu.addAction('Change Id')
             changeId.triggered.connect(self.chId)
             cancel = menu.addAction('Cancel')
+            cancel.triggered.connect(self.cancelannot)
 
             action = menu.exec_(self.mapToGlobal(event.pos()))
 
     def delBox(self,action):
-        global firstclick,secondclick,cnt,annot,ok,scan_widget
+        global firstclick,secondclick,cnt,annot,ok,scan_widget,le,Ok,openline
         firstclick = False
         secondclick = False
         if ((cnt>=0) and (cnt<len(annot))):
             ok = 'Yes'
             scan_widget.drawLaserScan()
+        if openline:
+            le.close()
+            Ok.close()
+            openline = False
+
+    def chooseClass(self, txt_):
+        global colour_index,annot,selections,txt,colours,ok,scan_widget,items
+        colour_index = annot[0].selections.index(txt_)%(len(colours))
+        ok = 'Yes'
+        scan_widget.training()
+
 
     def chId(self,action):
-        global le, rightClick
+        global le, rightClick,nw,Ok,openline
+        openline = True
         le = QLineEdit(self.window())
         le.setDragEnabled(True)
         le.setPlaceholderText("Write ID:")
         le.move(700,100)
-        #le.move(rightClick)
         le.show()
         Ok = QPushButton("Ok", self)
         Ok.move(700,150)
         Ok.clicked.connect(self.showObject)
         Ok.show()
+
+    def cancelannot(self,action):
+        global annot,cnt,samex,c1,c2,listofpointsx,listofpointsy,ok,scan_widget
+        for i in range(len(annot[cnt].samex)):
+            if ((annot[cnt].samex[i] >= c1[0]) and (annot[cnt].samex[i] <= c2[0]) and ((annot[cnt].samey[i] >= c2[1]) and (annot[cnt].samey[i] <= c1[1]))):
+                if ((annot[cnt].listofpointsx[i] != []) and (annot[cnt].listofpointsy[i] != [])): #IndexError: list index out of range
+                    annot[cnt].listofpointsx[i] = []
+                    annot[cnt].listofpointsy[i] = []
+        ok = 'Yes'
+        scan_widget.drawLaserScan()
 
 
     def bplay(self):
@@ -311,26 +344,38 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                     scan_widget.drawLaserScan()
 
     def showObject(self):
-        global le,selections,classes,objs,sel_pos
-        if le.text() not in selections:
-            classes.addItem(le.text())
+        global le,selections,classes,objs,annot,colour_index,colours,ok,scan_widget,Ok,submenu,write
+        if le.text() not in annot[0].selections:
+            #classes.addItem(le.text())
+            write = True
             objs = le.text()
-            selections.append(objs)
-        #le.setEnabled(False)
+            annot[0].selections.append(objs)
+            annot[cnt].annotID.append(objs)
+            colour_index = annot[0].selections.index(objs)%(len(colours))
+            ok = 'Yes'
+            scan_widget.training()
+            le.close()
+            Ok.close()
 
+    '''
     def chooseClass(self,text):
-        global scan_widget,txt,colour_index,colours,annot,selections
+        global scan_widget,txt,colour_index,colours,annot,selections,annot,le,Ok,openline
         txt = text
         if ((txt != 'Classes') and secondclick):
             annot[cnt].annotID.append(txt)
-            colour_index = selections.index(txt)%(len(colours))
+            colour_index = annot[0].selections.index(txt)%(len(colours))
             scan_widget.training()
+            if openline:
+                le.close()
+                Ok.close()
+                openline = False
+    '''
 
 class laserAnn:
 
     global c1,c2, objx,objy, s1,s2, txt
 
-    def __init__(self, samex_=None, samey_=None, listofpointsx_=None,listofpointsy_=None, annotID_=None, colourID_=None):
+    def __init__(self, samex_=None, samey_=None, listofpointsx_=None,listofpointsy_=None, annotID_=None, colourID_=None,selections_=None):
 
         self.samex = []
         self.samey = []
@@ -338,6 +383,7 @@ class laserAnn:
         self.listofpointsy = []
         self.annotID = []
         self.colourID = []
+        self.selections = []
 
         if samex_ == None:
             self.samex = []
@@ -363,10 +409,14 @@ class laserAnn:
             self.colourID = []
         else:
             self.colourID = colourID_
+        if selections_ == None:
+            self.selections = []
+        else:
+            self.selections = selections_
 
 def run(laserx,lasery,bagFile):
 
-    global timer,scan_widget,annot,s1,s2,bag_file,colorName,selections
+    global timer,scan_widget,annot,s1,s2,bag_file,colorName,selections,filename,items
 
     timer = QtCore.QTimer(None)
 
@@ -385,6 +435,7 @@ def run(laserx,lasery,bagFile):
                     row[3] = row[3][1:-1]
                     row[4] = row[4][1:-1]
                     row[5] = row[5][1:-1]
+                    row[6] = row[6][1:-1]
                     row[5] = row[5].replace("'","")
                     row[0] = row[0].split(", ")
                     row[1] = row[1].split(", ")
@@ -392,6 +443,7 @@ def run(laserx,lasery,bagFile):
                     row[3] = row[3].split(", ")
                     row[4] = row[4].split(", ")
                     row[5] = row[5].split(", ")
+                    row[6] = row[6].split(", ")
 
                     for i in range(0, len(row[0])):
                         if row[0][i] == "":
@@ -429,9 +481,19 @@ def run(laserx,lasery,bagFile):
                             break
                         else:
                             row[5][i] = str(row[5][i])
+                    for i in range(0, len(row[6])):
+                        if row[6][i] == "":
+                            row[6] = []
+                            break
+                        else:
+                            row[6][i] = str(row[6][i])
 
-                    la = laserAnn(row[0], row[1], row[2], row[3], row[4], row[5])
+                    la = laserAnn(row[0], row[1], row[2], row[3], row[4], row[5],row[6])
                     annot.append(la)
+
+                    for i in range(len(annot[0].selections)):
+                        if annot[0].selections[i] not in items:
+                            items.append(annot[0].selections[i])
     else:
         for i in range(len(laserx)):
             s1 = laserx[i].tolist()
