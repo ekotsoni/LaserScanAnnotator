@@ -41,12 +41,21 @@ def play_bag_file(bag_file):
 	duration = info_dict['duration']
 	topic_type = topic['type']
 
+	g = bag.read_messages(topics=[input_topic])
+	topic, msg, t = g.next()
+	
+	tmp = np.arange(msg.angle_min, msg.angle_max, msg.angle_increment)
+
+	if len(tmp) < len(msg.ranges):
+		tmp = np.arange(msg.angle_min, msg.angle_max+msg.angle_increment, msg.angle_increment)
+	theta = tmp
+		#theta.append(msg.angle_max+msg.angle_increment)
+	theta = np.degrees(theta)
+
 	#Loop through the rosbag
 	for topic, msg, t in bag.read_messages(topics=[input_topic]):
 		#Get the scan
 		laserDistances.append(np.array(msg.ranges))
-		theta = np.arange(msg.angle_min, msg.angle_max + msg.angle_increment, msg.angle_increment)
-		theta = np.degrees(theta)
 		sx.append(np.cos(np.radians(theta)) * laserDistances[-1])
 		sy.append(np.sin(np.radians(theta)) * laserDistances[-1])
 	laserDistances = []

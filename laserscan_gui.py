@@ -13,7 +13,7 @@ import functools
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt, QUrl, pyqtSignal, QFile, QIODevice
+from PyQt5.QtCore import Qt, QUrl, pyqtSignal, QFile, QIODevice, QRect
 from PyQt5.QtWidgets import (QApplication, QComboBox, QHBoxLayout, QPushButton,
 QSizePolicy, QVBoxLayout, QWidget,QLineEdit, QInputDialog, QMenu)
 
@@ -54,7 +54,6 @@ annot = []
 classes = None
 selections = []
 le = None
-objs = None
 rightClick = None
 items = []
 openline = False
@@ -80,6 +79,51 @@ class Window(FigureCanvas):
 
     def icon(self):
         pass
+
+class MyPopup(QWidget):
+
+    def __init__(self):
+
+        global le
+
+        QWidget.__init__(self)
+        self.setWindowTitle('Add New Person')
+        self.main_widget = QtWidgets.QWidget(self)
+        self.le = QLineEdit(self.window())
+        self.le.setDragEnabled(True)
+        self.le.setPlaceholderText("Write ID:")
+        self.Ok = QPushButton("Ok", self)
+
+    def paintEvent(self,e):
+
+        global le
+
+        self.le.setPlaceholderText('Write ID:')
+        self.le.setMinimumWidth(100)
+        self.le.setDragEnabled(True)
+        self.le.move(90,15)
+        self.Ok.move(115,60)
+
+        self.le.textChanged.connect(self.personLabel)
+        self.Ok.clicked.connect(self.closePerson)
+
+    def personLabel(self,text):
+        global txt
+        txt = text
+
+    def closePerson(self):
+        global txt,le,colour_index,annot,selections,colours,ok,scan_widget,cnt
+        if txt != 'Add New Person':
+            txt = self.le.text()
+            self.Ok.clicked.disconnect()
+            self.close()
+
+            if txt not in annot[0].selections:
+                annot[0].selections.append(txt)
+                annot[cnt].annotID.append(txt)
+                colour_index = annot[0].selections.index(txt)%(len(colours))
+                ok = 'Yes'
+                scan_widget.training()
 
 
 class LS(Window):
@@ -178,12 +222,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         prevFrameButton = QPushButton("Previous")
         nextFrameButton = QPushButton("Next")
         stopButton = QPushButton("Stop")
-        '''
-        classes = QComboBox()
-        classes.addItem('Classes')
-        for i in range(len(items)):
-            classes.addItem(items[i])
-        '''
+
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(playButton)
         buttonLayout.addWidget(pauseButton)
@@ -191,15 +230,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         buttonLayout.addWidget(nextFrameButton)
         buttonLayout.addWidget(stopButton)
         buttonLayout.setAlignment(Qt.AlignTop)
-        '''
-        classLayout = QVBoxLayout()
-        classLayout.addWidget(classes)
-        classLayout.setAlignment(Qt.AlignTop)
-        '''
+
         layout = QVBoxLayout(self.main_widget)
         layout.addLayout(scanLayout)
         layout.addLayout(buttonLayout)
-        #layout.addLayout(classLayout)
 
         #Define Connections
         playButton.clicked.connect(self.bplay)
@@ -207,7 +241,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         prevFrameButton.clicked.connect(self.bprevious)
         nextFrameButton.clicked.connect(self.bnext)
         stopButton.clicked.connect(self.bstop)
-        #classes.activated[str].connect(self.chooseClass)
 
         fig.canvas.mpl_connect('button_press_event', self.onClick)
 
@@ -216,7 +249,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def contextMenuEvent(self,event):
 
-        global ok, rightClick,items,classes,submenu
+        global ok, rightClick,items,classes,submenu,txt
 
         rightClick = event.pos()
 
@@ -230,6 +263,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             for i in range(len(items)):
                 classes = submenu.addAction(items[i])
                 classes.triggered.connect(functools.partial(self.chooseClass,items[i]))
+            if (txt != None):
+                classes = submenu.addAction(txt)
+                classes.triggered.connect(functools.partial(self.chooseClass,txt))
             changeId = submenu.addAction('Change Id')
             changeId.triggered.connect(self.chId)
             cancel = menu.addAction('Cancel')
@@ -255,30 +291,29 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         ok = 'Yes'
         scan_widget.training()
 
-
     def chId(self,action):
-        global le, rightClick,nw,Ok,openline
-        openline = True
-        le = QLineEdit(self.window())
-        le.setDragEnabled(True)
-        le.setPlaceholderText("Write ID:")
-        le.move(700,100)
-        le.show()
-        Ok = QPushButton("Ok", self)
-        Ok.move(700,150)
-        Ok.clicked.connect(self.showObject)
-        Ok.show()
+        self.new = MyPopup()
+        self.new.setGeometry(QRect(500, 100, 300, 100))
+        self.new.show()
 
     def cancelannot(self,action):
-        global annot,cnt,samex,c1,c2,listofpointsx,listofpointsy,ok,scan_widget
+        global annot,cnt,samex,samey,c1,c2,listofpointsx,listofpointsy,ok,scan_widget,selections,colourID,annotID
         for i in range(len(annot[cnt].samex)):
             if ((annot[cnt].samex[i] >= c1[0]) and (annot[cnt].samex[i] <= c2[0]) and ((annot[cnt].samey[i] >= c2[1]) and (annot[cnt].samey[i] <= c1[1]))):
-                if ((annot[cnt].listofpointsx[i] != []) and (annot[cnt].listofpointsy[i] != [])): #IndexError: list index out of range
-                    annot[cnt].listofpointsx[i] = []
-                    annot[cnt].listofpointsy[i] = []
+               annot[cnt].listofpointsx.remove(annot[cnt].listofpointsx[i]) #IndexError: list index out of range
+               annot[cnt].listofpointsy.remove(annot[cnt].listofpointsy[i])
+
+        #Re-Write annotations in csv file with changes
+        filename = bag_file.replace(".bag","_laser.csv")
+        with open(filename, 'w') as data:
+            write = csv.writer(data)
+            for row in annot:
+                row_ = [row.samex, row.samey, row.listofpointsx, row.listofpointsy, row.annotID, row.colourID, row.selections]
+                write.writerow(row_)
+            data.close()
+
         ok = 'Yes'
         scan_widget.drawLaserScan()
-
 
     def bplay(self):
         global scan_widget
@@ -342,34 +377,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                     secondclick = True
                     ok = 'Rect'
                     scan_widget.drawLaserScan()
-
-    def showObject(self):
-        global le,selections,classes,objs,annot,colour_index,colours,ok,scan_widget,Ok,submenu,write
-        if le.text() not in annot[0].selections:
-            #classes.addItem(le.text())
-            write = True
-            objs = le.text()
-            annot[0].selections.append(objs)
-            annot[cnt].annotID.append(objs)
-            colour_index = annot[0].selections.index(objs)%(len(colours))
-            ok = 'Yes'
-            scan_widget.training()
-            le.close()
-            Ok.close()
-
-    '''
-    def chooseClass(self,text):
-        global scan_widget,txt,colour_index,colours,annot,selections,annot,le,Ok,openline
-        txt = text
-        if ((txt != 'Classes') and secondclick):
-            annot[cnt].annotID.append(txt)
-            colour_index = annot[0].selections.index(txt)%(len(colours))
-            scan_widget.training()
-            if openline:
-                le.close()
-                Ok.close()
-                openline = False
-    '''
 
 class laserAnn:
 
