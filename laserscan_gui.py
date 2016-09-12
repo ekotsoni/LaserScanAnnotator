@@ -58,6 +58,8 @@ rightClick = None
 items = []
 openline = False
 write = False
+range_max = 0
+timeON = 0
 
 class Window(FigureCanvas):
 
@@ -125,21 +127,21 @@ class MyPopup(QWidget):
                 ok = 'Yes'
                 scan_widget.training()
 
-
 class LS(Window):
 
     def ptime(self):
 
-        global timer
+        global timer,timeON
 
         timer.timeout.connect(self.icon)
-        timer.start(0.0000976562732)
+        timer.start(timeON)
+        #timer.start(0.0000976562732)
 
     def icon(self):
 
         global cnt,annot,ok,scan_widget
 
-        if(cnt<len(annot)):
+        if(cnt < len(annot)):
             ok = 'Yes'
             scan_widget.drawLaserScan()
             cnt += 1
@@ -151,15 +153,15 @@ class LS(Window):
 
     def drawLaserScan(self):
 
-        global ax,annot,cnt,samex,samey,listofpointsx,listofpointsy,fw,ok,c1,c2,colorName,firstclick,secondclick,colourID,colorName
+        global ax,annot,cnt,samex,samey,listofpointsx,listofpointsy,fw,ok,c1,c2,colorName,firstclick,secondclick,colourID,colorName,range_max,ok
 
         if (ok == 'Yes'):
             ax.clear()
             ax.axis('equal')
-            ax.plot(annot[cnt].samex,annot[cnt].samey,'bo')
+            ax.plot(annot[cnt].samex,annot[cnt].samey,'b.')
             if not annot[cnt].listofpointsx == []:
                 for j in range(len(annot[cnt].colourID)):
-                    ax.plot(annot[cnt].listofpointsx[j],annot[cnt].listofpointsy[j],color=annot[cnt].colourID[j],marker='o')
+                    ax.plot(annot[cnt].listofpointsx[j],annot[cnt].listofpointsy[j],color=annot[cnt].colourID[j],marker='.')
             fw.draw()
         elif (ok == 'Rect'):
             ax.axis('equal')
@@ -185,7 +187,7 @@ class LS(Window):
                 annot[cnt].listofpointsy.append(annot[cnt].samey[i])
         ok = 'Yes'
         scan_widget.drawLaserScan()
-        colour_index+=1
+        colour_index += 1
         if (colour_index == (len(colours))):
            colour_index = 0 
         firstclick = False
@@ -300,8 +302,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         global annot,cnt,samex,samey,c1,c2,listofpointsx,listofpointsy,ok,scan_widget,selections,colourID,annotID
         for i in range(len(annot[cnt].samex)):
             if ((annot[cnt].samex[i] >= c1[0]) and (annot[cnt].samex[i] <= c2[0]) and ((annot[cnt].samey[i] >= c2[1]) and (annot[cnt].samey[i] <= c1[1]))):
-               annot[cnt].listofpointsx.remove(annot[cnt].listofpointsx[i]) #IndexError: list index out of range
-               annot[cnt].listofpointsy.remove(annot[cnt].listofpointsy[i])
+                if ((annot[cnt].listofpointsx[i] is not None) and (annot[cnt].listofpointsy[i] is not None)):
+                    annot[cnt].annotID.remove(annot[cnt].annotID[i])
+                    annot[cnt].colourID.remove(annot[cnt].colourID[i])
+                    annot[cnt].listofpointsx.remove(annot[cnt].listofpointsx[i])
+                    annot[cnt].listofpointsy.remove(annot[cnt].listofpointsy[i])
 
         #Re-Write annotations in csv file with changes
         filename = bag_file.replace(".bag","_laser.csv")
@@ -421,9 +426,11 @@ class laserAnn:
         else:
             self.selections = selections_
 
-def run(laserx,lasery,bagFile):
+def run(laserx,lasery,bagFile,time_increment):
 
-    global timer,scan_widget,annot,s1,s2,bag_file,colorName,selections,filename,items
+    global timer,scan_widget,annot,s1,s2,bag_file,colorName,selections,filename,items,range_max,time0N
+
+    timeON = time_increment
 
     timer = QtCore.QTimer(None)
 

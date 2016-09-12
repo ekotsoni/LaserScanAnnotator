@@ -28,10 +28,12 @@ theta = []
 sx = []
 sy = []
 input_topic = None
+range_max = 0
+time_incr = 0
 
 def play_bag_file(bag_file):
 
-	global laserDistances, sx, sy, theta, input_topic
+	global laserDistances, sx, sy, theta, input_topic, range_max,time_incr
 
 	bag = rosbag.Bag(bag_file)
 	info_dict = yaml.load(bag._get_yaml_info())
@@ -43,7 +45,9 @@ def play_bag_file(bag_file):
 
 	g = bag.read_messages(topics=[input_topic])
 	topic, msg, t = g.next()
-	
+	range_max = msg.range_max 
+	time_incr = msg.time_increment
+	print time_incr
 	tmp = np.arange(msg.angle_min, msg.angle_max, msg.angle_increment)
 
 	if len(tmp) < len(msg.ranges):
@@ -55,15 +59,33 @@ def play_bag_file(bag_file):
 	#Loop through the rosbag
 	for topic, msg, t in bag.read_messages(topics=[input_topic]):
 		#Get the scan
-		laserDistances.append(np.array(msg.ranges))
-		sx.append(np.cos(np.radians(theta)) * laserDistances[-1])
-		sy.append(np.sin(np.radians(theta)) * laserDistances[-1])
+		#laserDistances.append(np.array(msg.ranges))
+		tmp = np.array(msg.ranges)
+		for i in range(len(tmp)):
+			if tmp[i] > msg.range_max:
+				tmp[i] = 'inf'
+		laserDistances.append(tmp)
+		x = np.cos(np.radians(theta)) * laserDistances[-1]
+		y = np.sin(np.radians(theta)) * laserDistances[-1]
+		'''for i in range(len(x)):
+			print x[i]
+			if(x[i] > msg.range_max):
+				np.delete(x, i, None)
+				np.delete(y, i, None)
+		for i in range(len(y)):
+			if(y[i] > msg.range_max):
+				np.delete(x, i, None)
+				np.delete(y, i, None)
+		'''
+		#if(x <= msg.range_max and y <= msg.range_max):
+		sx.append(x)
+		sy.append(y)
 	laserDistances = []
 	bag.close()
 
 def start(input_file,output_file,scan_topic):
 
-	global sx, sy, input_topic
+	global sx, sy, input_topic, range_max,time_incr
 
 	bag_file = input_file
 	output_file = output_file
@@ -83,4 +105,4 @@ def start(input_file,output_file,scan_topic):
 	#Open bag and get framerate	
 	play_bag_file(bag_file)
 
-	laserscan_gui.run(sx, sy, bag_file)
+	laserscan_gui.run(sx, sy, bag_file, time_incr)

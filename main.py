@@ -2,4 +2,4 @@
 import rosbag_annotator as ra
 
 if __name__ == '__main__':
-    ra.start('/home/ekotsoni/2016-02-23-13-38-26.bag','testOut','/scan')
+    ra.start('/home/ekotsoni/ss1_lsN_sc2_rumdag_cgtyia_v.bag','testOut','/scan')
