@@ -1,6 +1,5 @@
 # LaserScanAnnotator
-DEPENDENCIES
-
+___DEPENDENCIES___
 
 OS : Ubuntu 16.04 edition
 
@@ -24,9 +23,7 @@ install PyQt5 from Synaptics
 
 **if gstreamer not automatically installed, install also from synaptics
 
-
-HOW TO RUN TOOL
-
+__HOW TO RUN TOOL__
 
 ./main.py
 
