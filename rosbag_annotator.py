@@ -67,17 +67,6 @@ def play_bag_file(bag_file):
 		laserDistances.append(tmp)
 		x = np.cos(np.radians(theta)) * laserDistances[-1]
 		y = np.sin(np.radians(theta)) * laserDistances[-1]
-		'''for i in range(len(x)):
-			print x[i]
-			if(x[i] > msg.range_max):
-				np.delete(x, i, None)
-				np.delete(y, i, None)
-		for i in range(len(y)):
-			if(y[i] > msg.range_max):
-				np.delete(x, i, None)
-				np.delete(y, i, None)
-		'''
-		#if(x <= msg.range_max and y <= msg.range_max):
 		sx.append(x)
 		sy.append(y)
 	laserDistances = []

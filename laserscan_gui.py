@@ -300,13 +300,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def cancelannot(self,action):
         global annot,cnt,samex,samey,c1,c2,listofpointsx,listofpointsy,ok,scan_widget,selections,colourID,annotID
-        for i in range(len(annot[cnt].samex)):
-            if ((annot[cnt].samex[i] >= c1[0]) and (annot[cnt].samex[i] <= c2[0]) and ((annot[cnt].samey[i] >= c2[1]) and (annot[cnt].samey[i] <= c1[1]))):
+        i=0
+        while (i<len(annot[cnt].listofpointsx)):
+            if ((annot[cnt].listofpointsx[i] >= c1[0]) and (annot[cnt].listofpointsx[i] <= c2[0]) and ((annot[cnt].listofpointsy[i] >= c2[1]) and (annot[cnt].listofpointsy[i] <= c1[1]))):
                 if ((annot[cnt].listofpointsx[i] is not None) and (annot[cnt].listofpointsy[i] is not None)):
-                    annot[cnt].annotID.remove(annot[cnt].annotID[i])
-                    annot[cnt].colourID.remove(annot[cnt].colourID[i])
                     annot[cnt].listofpointsx.remove(annot[cnt].listofpointsx[i])
                     annot[cnt].listofpointsy.remove(annot[cnt].listofpointsy[i])
+            else:
+                i += 1 
+                print i
 
         #Re-Write annotations in csv file with changes
         filename = bag_file.replace(".bag","_laser.csv")
