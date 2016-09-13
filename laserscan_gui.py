@@ -198,7 +198,7 @@ class LS(Window):
         with open(filename, 'w') as data:
             write = csv.writer(data)
             for row in annot:
-                row_ = [row.samex, row.samey, row.listofpointsx, row.listofpointsy, row.annotID, row.colourID, row.selections]
+                row_ = [row.samex, row.samey, row.listofpointsx, row.listofpointsy, row.annotID, row.colourID]
                 write.writerow(row_)
             data.close()
 
@@ -262,12 +262,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             deleteBox = menu.addAction('Delete Box')
             deleteBox.triggered.connect(self.delBox)
             submenu = menu.addMenu('Choose Person')
-            for i in range(len(items)):
-                classes = submenu.addAction(items[i])
-                classes.triggered.connect(functools.partial(self.chooseClass,items[i]))
-            if (txt != None):
-                classes = submenu.addAction(txt)
-                classes.triggered.connect(functools.partial(self.chooseClass,txt))
+            classes = submenu.addAction('RU')
+            classes.triggered.connect(functools.partial(self.chooseClass,'RU'))
+            classes = submenu.addAction('C')
+            classes.triggered.connect(functools.partial(self.chooseClass,'C'))
+            classes = submenu.addAction('V')
+            classes.triggered.connect(functools.partial(self.chooseClass,'V'))
             changeId = submenu.addAction('Change Id')
             changeId.triggered.connect(self.chId)
             cancel = menu.addAction('Cancel')
@@ -288,8 +288,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             openline = False
 
     def chooseClass(self, txt_):
-        global colour_index,annot,selections,txt,colours,ok,scan_widget,items
-        colour_index = annot[0].selections.index(txt_)%(len(colours))
+        global colour_index,annot,selections,txt,colours,ok,scan_widget,items,laserAnn
+        txt = txt_
+        if txt == 'RU':
+            colour_index = 0
+        elif txt == 'C':
+            colour_index = 1
+        elif txt == 'V':
+            colour_index = 2
+        #colour_index = laserAnn.selections.index(txt_)%(len(colours))
         ok = 'Yes'
         scan_widget.training()
 
@@ -387,9 +394,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
 class laserAnn:
 
-    global c1,c2, objx,objy, s1,s2, txt
+    global c1,c2, objx,objy, s1,s2, txt, selections
 
-    def __init__(self, samex_=None, samey_=None, listofpointsx_=None,listofpointsy_=None, annotID_=None, colourID_=None,selections_=None):
+    def __init__(self, samex_=None, samey_=None, listofpointsx_=None,listofpointsy_=None, annotID_=None, colourID_=None):
 
         self.samex = []
         self.samey = []
@@ -397,7 +404,7 @@ class laserAnn:
         self.listofpointsy = []
         self.annotID = []
         self.colourID = []
-        self.selections = []
+        #self.selections = ['RU', 'C', 'V']
 
         if samex_ == None:
             self.samex = []
@@ -423,10 +430,6 @@ class laserAnn:
             self.colourID = []
         else:
             self.colourID = colourID_
-        if selections_ == None:
-            self.selections = []
-        else:
-            self.selections = selections_
 
 def run(laserx,lasery,bagFile,time_increment):
 
@@ -451,7 +454,7 @@ def run(laserx,lasery,bagFile,time_increment):
                     row[3] = row[3][1:-1]
                     row[4] = row[4][1:-1]
                     row[5] = row[5][1:-1]
-                    row[6] = row[6][1:-1]
+                    #row[6] = row[6][1:-1]
                     row[5] = row[5].replace("'","")
                     row[0] = row[0].split(", ")
                     row[1] = row[1].split(", ")
@@ -459,7 +462,7 @@ def run(laserx,lasery,bagFile,time_increment):
                     row[3] = row[3].split(", ")
                     row[4] = row[4].split(", ")
                     row[5] = row[5].split(", ")
-                    row[6] = row[6].split(", ")
+                    #row[6] = row[6].split(", ")
 
                     for i in range(0, len(row[0])):
                         if row[0][i] == "":
@@ -497,17 +500,18 @@ def run(laserx,lasery,bagFile,time_increment):
                             break
                         else:
                             row[5][i] = str(row[5][i])
-                    for i in range(0, len(row[6])):
+                    '''for i in range(0, len(row[6])):
                         if row[6][i] == "":
                             row[6] = []
                             break
                         else:
                             row[6][i] = str(row[6][i])
+                    d'''
 
-                    la = laserAnn(row[0], row[1], row[2], row[3], row[4], row[5],row[6])
+                    la = laserAnn(row[0], row[1], row[2], row[3], row[4], row[5])
                     annot.append(la)
 
-                    for i in range(len(annot[0].selections)):
+                    for i in range(len(selections)):
                         if annot[0].selections[i] not in items:
                             items.append(annot[0].selections[i])
     else:
