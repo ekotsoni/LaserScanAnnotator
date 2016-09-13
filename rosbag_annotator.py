@@ -45,9 +45,8 @@ def play_bag_file(bag_file):
 
 	g = bag.read_messages(topics=[input_topic])
 	topic, msg, t = g.next()
-	range_max = msg.range_max 
+	range_max = msg.range_max
 	time_incr = msg.time_increment
-	print time_incr
 	tmp = np.arange(msg.angle_min, msg.angle_max, msg.angle_increment)
 
 	if len(tmp) < len(msg.ranges):
